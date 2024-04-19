@@ -6,7 +6,7 @@ resolver = "2"
 panic = "abort"
 
 [profile.release]
-debug = true
+debug = false
 panic = "abort"
-lto = "thin"
+lto = "fat"
 codegen-units = 1

@@ -44,7 +44,7 @@ version = "0.8.6"
 features = ["xxh3"]
 
 [dependencies.windows-sys]
-version = "0.48.0"
+version = "0.52.0"
 features = [
   "Win32_Devices_Display",
   "Win32_Foundation",
@@ -61,6 +61,7 @@ features = [
   "Win32_System_Threading",
   "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
+  "Win32_System_WindowsProgramming"
 ]
 
 [build-dependencies]

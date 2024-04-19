@@ -31,8 +31,12 @@ use windows_sys::Win32::{
     },
     Performance::QueryPerformanceCounter,
     SystemServices::DLL_PROCESS_ATTACH,
+    WindowsProgramming::WritePrivateProfileStringW,
   },
 };
+use windows_sys::core::w;
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
 
 macro_rules! log {
   ($($args:tt)*) => {
@@ -268,4 +272,36 @@ unsafe extern "stdcall" fn Init() {
 unsafe extern "stdcall" fn InitD2Mod(_: u32) -> u32 {
   Init();
   0
+}
+
+#[no_mangle]
+unsafe extern "stdcall" fn SetFramerateLimit(fps: u32, foreground: bool) {
+  let new_fps = Ratio::new(fps, unsafe { NonZeroU32::new_unchecked(1) });
+
+  if foreground {
+    if fps == 0 {
+      INSTANCE.frame_rate_from_window(INSTANCE.sync.lock().accessor.get_hwnd());
+    }
+    else {
+      INSTANCE.config.fps.store_relaxed(new_fps);
+      INSTANCE.render_fps.store_relaxed(new_fps);
+
+      let fps_str = OsStr::new(&new_fps.to_string())
+      .encode_wide()
+      .chain(Some(0))
+      .collect::<Vec<_>>();
+
+      WritePrivateProfileStringW(w!(""), w!("fps"), fps_str.as_ptr(), w!("d2fps.ini"));
+    }
+  }
+  else {
+    INSTANCE.config.bg_fps.store_relaxed(new_fps);
+
+    let fps_str = OsStr::new(&new_fps.to_string())
+    .encode_wide()
+    .chain(Some(0))
+    .collect::<Vec<_>>();
+
+    WritePrivateProfileStringW(w!(""), w!("bg-fps"), fps_str.as_ptr(), w!("d2fps.ini"));
+  }
 }

@@ -3,3 +3,4 @@ EXPORTS
 _DllMain@12
 _Init@0
 _Init@4=_InitD2Mod@4
+_SetFramerateLimit@8
