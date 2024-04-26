@@ -305,3 +305,9 @@ unsafe extern "stdcall" fn SetFramerateLimit(fps: u32, foreground: bool) {
     WritePrivateProfileStringW(w!(""), w!("bg-fps"), fps_str.as_ptr(), w!("d2fps.ini"));
   }
 }
+
+#[no_mangle]
+unsafe extern "stdcall" fn GetFramerateLimit(fps_foreground: *mut u32, fps_background: *mut u32) {
+  *fps_foreground = INSTANCE.config.fps.load_relaxed().num;
+  *fps_background = INSTANCE.config.bg_fps.load_relaxed().num;
+}
