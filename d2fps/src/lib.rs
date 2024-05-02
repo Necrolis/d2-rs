@@ -30,13 +30,9 @@ use windows_sys::Win32::{
       GetModuleHandleExW, GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_PIN,
     },
     Performance::QueryPerformanceCounter,
-    SystemServices::DLL_PROCESS_ATTACH,
-    WindowsProgramming::WritePrivateProfileStringW,
+    SystemServices::DLL_PROCESS_ATTACH
   },
 };
-use windows_sys::core::w;
-use std::ffi::OsStr;
-use std::os::windows::ffi::OsStrExt;
 
 macro_rules! log {
   ($($args:tt)*) => {
@@ -106,6 +102,8 @@ struct Instance {
   render_fps: AtomicRatio,
   /// Handle to the monitor on which the window was last seen.
   current_monitor: AtomicIsize,
+  /// Refresh rate of the current monitor
+  current_monitor_fps: AtomicRatio,
   /// Whether we've attempted to attached to the game.
   is_attached: AtomicBool,
   /// Manages whether sleep calls should use a high precision timer.
@@ -136,9 +134,15 @@ impl Instance {
       if self.current_monitor.swap(mon, Relaxed) != mon {
         if let Some(rate) = monitor_refresh_rate(mon) {
           log!("Detected monitor fps: {rate}");
+          self.current_monitor_fps.store_relaxed(rate);
           self.active_fps.store_relaxed(rate);
           self.render_fps.store_relaxed(rate);
         }
+      }
+      else {
+        let refresh_rate: Ratio = self.current_monitor_fps.load_relaxed();
+        self.active_fps.store_relaxed(refresh_rate);
+        self.render_fps.store_relaxed(refresh_rate);
       }
     }
   }
@@ -161,6 +165,7 @@ static INSTANCE: Instance = Instance {
   active_fps: AtomicRatio::new(GAME_FPS),
   render_fps: AtomicRatio::new(GAME_FPS),
   current_monitor: AtomicIsize::new(0),
+  current_monitor_fps: AtomicRatio::new(GAME_FPS),
   is_attached: AtomicBool::new(false),
   precision_timer: PrecisionTimer::new(),
   is_window_hidden: AtomicBool::new(false),
@@ -279,31 +284,21 @@ unsafe extern "stdcall" fn SetFramerateLimit(fps: u32, foreground: bool) {
   let new_fps = Ratio::new(fps, unsafe { NonZeroU32::new_unchecked(1) });
 
   if foreground {
+    INSTANCE.config.fps.store_relaxed(new_fps);
+
     if fps == 0 {
       INSTANCE.frame_rate_from_window(INSTANCE.sync.lock().accessor.get_hwnd());
     }
     else {
-      INSTANCE.config.fps.store_relaxed(new_fps);
       INSTANCE.render_fps.store_relaxed(new_fps);
-
-      let fps_str = OsStr::new(&new_fps.to_string())
-      .encode_wide()
-      .chain(Some(0))
-      .collect::<Vec<_>>();
-
-      WritePrivateProfileStringW(w!(""), w!("fps"), fps_str.as_ptr(), w!("d2fps.ini"));
+      INSTANCE.active_fps.store_relaxed(new_fps);
     }
   }
   else {
     INSTANCE.config.bg_fps.store_relaxed(new_fps);
-
-    let fps_str = OsStr::new(&new_fps.to_string())
-    .encode_wide()
-    .chain(Some(0))
-    .collect::<Vec<_>>();
-
-    WritePrivateProfileStringW(w!(""), w!("bg-fps"), fps_str.as_ptr(), w!("d2fps.ini"));
   }
+
+  INSTANCE.config.save_config();
 }
 
 #[no_mangle]

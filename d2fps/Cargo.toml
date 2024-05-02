@@ -19,6 +19,8 @@ bitflags = "2.3.1"
 fxhash = "0.2.1"
 atomic_float = "0.1.0"
 rand_xoshiro = "0.6.0"
+serde = { version = "1.0.104", features = ["derive"] }
+serde_json = "1.0.48"
 
 [dependencies.bin_patch]
 path = "../bin_patch"

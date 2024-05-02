@@ -1,0 +1,18 @@
+{
+	"framerate": {
+		"foreground": 0,
+		"background": 25
+	},
+	"features": {
+		"menu_fps": true,
+		"game_fps": true,
+		"motion_smoothing": true,
+		"weather_smoothing": true,
+		"arcane_bg": true,
+		"anim_rate": true
+	},
+	"compatibility": {
+		"reapply_patches": true,
+		"integrity_checks": true
+	}
+}
